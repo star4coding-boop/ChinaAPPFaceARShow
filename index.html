@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AR 變裝濾鏡</title>
+  <title>中華文化 AR 試戴</title>
   <script src="https://aframe.io/releases/1.4.2/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.2/dist/mindar-face-aframe.prod.js"></script>
   
@@ -15,33 +15,71 @@
       position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: #fdfbf7; display: flex; flex-direction: column;
       justify-content: center; align-items: center; z-index: 999;
-      text-align: center;
     }
-    button {
-      padding: 15px 30px; font-size: 18px; background: #d84315; color: white;
-      border: none; border-radius: 50px; cursor: pointer; margin-top: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    #start-btn {
+      padding: 12px 24px; font-size: 18px; background: #d84315; color: white;
+      border: none; border-radius: 8px; cursor: pointer; margin-top: 10px;
     }
-    
+
+    /* 底部操作區 */
+    #ui-container {
+      position: absolute; bottom: 20px; left: 0; width: 100%;
+      display: none; /* AR 準備好後才顯示 */
+      flex-direction: column; align-items: center;
+      z-index: 1000;
+      pointer-events: none; /* 讓點擊穿透到按鈕 */
+    }
+
+    /* 按鈕列 */
+    .controls-row {
+      display: flex; align-items: center; gap: 20px;
+      pointer-events: auto;
+    }
+
+    /* 左右切換按鈕 */
+    .switch-btn {
+      width: 50px; height: 50px;
+      background: rgba(255, 255, 255, 0.8);
+      border: 2px solid #5d4037; border-radius: 50%;
+      font-size: 24px; color: #5d4037; cursor: pointer;
+      display: flex; justify-content: center; align-items: center;
+    }
+    .switch-btn:active { background: #d84315; color: white; }
+
     /* 拍照按鈕 */
     #capture-btn {
-      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-      width: 70px; height: 70px; background: white; border: 4px solid #d84315;
-      border-radius: 50%; z-index: 1000; cursor: pointer; display: none;
+      width: 70px; height: 70px;
+      background: white; border: 4px solid #d84315;
+      border-radius: 50%; cursor: pointer;
     }
-    #capture-btn:active { transform: translateX(-50%) scale(0.9); }
+    #capture-btn:active { transform: scale(0.95); background: #eee; }
 
-    /* 錯誤訊息 */
-    #error-msg { color: red; margin-top: 10px; display: none; padding: 0 20px; }
+    /* 目前款式提示 */
+    #hat-label {
+      background: rgba(0,0,0,0.5); color: white;
+      padding: 5px 15px; border-radius: 15px;
+      margin-bottom: 10px; font-size: 14px;
+    }
+    
+    #error-msg { color: red; display: none; margin-top:10px; }
   </style>
 </head>
 <body>
 
   <div id="start-screen">
-    <h2 style="color:#5d4037">🎭 中華文化 AR 變裝</h2>
-    <p style="color:#888">請允許相機權限以開始體驗</p>
+    <h2>🎭 中華文化試戴</h2>
+    <p>請允許相機權限</p>
     <div id="error-msg"></div>
-    <button id="start-btn">👉 啟動相機</button>
+    <button id="start-btn">👉 開始體驗</button>
+  </div>
+
+  <div id="ui-container">
+    <div id="hat-label">款式 1 / 3</div>
+    <div class="controls-row">
+      <button class="switch-btn" id="prev-btn">◀</button>
+      <div id="capture-btn"></div>
+      <button class="switch-btn" id="next-btn">▶</button>
+    </div>
   </div>
 
   <a-scene mindar-face="autoStart: false; filterMinCF:0.001; filterBeta: 0.01" 
@@ -50,62 +88,91 @@
            vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <img id="hat-img" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/face-tracking/assets/spark/spark.png">
+      <img id="img-hat1" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/face-tracking/assets/spark/spark.png">
+      <img id="img-hat2" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/face-tracking/assets/spark/spark.png">
+      <img id="img-hat3" src="https://cdn.jsdelivr.net/gh/hiukim/mind-ar-js@1.2.2/examples/face-tracking/assets/glasses/glasses1.png">
     </a-assets>
 
     <a-camera active="false" position="0 0 0"></a-camera>
 
     <a-entity mindar-face-target="anchorIndex: 168">
-      <a-image src="#hat-img" position="0 0.1 0" scale="0.6 0.6 0.6"></a-image>
+      <a-image id="model-0" src="#img-hat1" visible="true" position="0 0 0" scale="0.6 0.6 0.6"></a-image>
+      
+      <a-image id="model-1" src="#img-hat2" visible="false" position="0 0 0" scale="0.7 0.7 0.7" color="#FF3333"></a-image>
+      
+      <a-image id="model-2" src="#img-hat3" visible="false" position="0 -0.2 0" scale="0.6 0.6 0.6"></a-image>
     </a-entity>
   </a-scene>
-
-  <div id="capture-btn"></div>
 
   <script>
     const startScreen = document.getElementById('start-screen');
     const startBtn = document.getElementById('start-btn');
-    const captureBtn = document.getElementById('capture-btn');
+    const uiContainer = document.getElementById('ui-container');
     const scene = document.querySelector('a-scene');
     const errorMsg = document.getElementById('error-msg');
+    const hatLabel = document.getElementById('hat-label');
 
+    // 定義所有款式的 ID (對應上面的 HTML ID)
+    const models = ['model-0', 'model-1', 'model-2'];
+    const names = ['京劇臉譜', '赤色戰神', '復古眼鏡']; // 對應名稱
+    let currentIndex = 0;
+
+    // 啟動 AR
     startBtn.addEventListener('click', async () => {
       startBtn.innerText = "啟動中...";
       try {
-        // 嘗試啟動 AR
         await scene.systems['mindar-face-system'].start();
       } catch (e) {
         console.error(e);
-        // 如果失敗，通常是不支援或權限問題
-        if (window.location.protocol !== 'https:') {
-            errorMsg.innerText = "錯誤：必須使用 HTTPS 協定";
-        } else {
-            errorMsg.innerText = "無法開啟相機，請檢查瀏覽器權限。";
-        }
+        errorMsg.innerText = "無法開啟相機，請檢查權限或使用 Safari/Chrome。";
         errorMsg.style.display = 'block';
         startBtn.innerText = "重試";
       }
     });
 
+    // AR 準備就緒
     scene.addEventListener("arReady", () => {
       startScreen.style.display = 'none';
-      captureBtn.style.display = 'block';
+      uiContainer.style.display = 'flex'; // 顯示操作按鈕
     });
 
-    captureBtn.addEventListener('click', () => {
+    // 切換功能函數
+    function switchHat(direction) {
+      // 隱藏當前
+      document.getElementById(models[currentIndex]).setAttribute('visible', 'false');
+      
+      // 計算下一個索引
+      if (direction === 'next') {
+        currentIndex = (currentIndex + 1) % models.length;
+      } else {
+        currentIndex = (currentIndex - 1 + models.length) % models.length;
+      }
+
+      // 顯示新的
+      document.getElementById(models[currentIndex]).setAttribute('visible', 'true');
+      hatLabel.innerText = `${names[currentIndex]} (${currentIndex + 1}/${models.length})`;
+    }
+
+    // 綁定按鈕事件
+    document.getElementById('next-btn').addEventListener('click', () => switchHat('next'));
+    document.getElementById('prev-btn').addEventListener('click', () => switchHat('prev'));
+
+    // 拍照功能
+    document.getElementById('capture-btn').addEventListener('click', () => {
       const video = document.querySelector('video');
       const aSceneCanvas = scene.components.screenshot.getCanvas('perspective');
       const canvas = document.createElement('canvas');
       if (video && aSceneCanvas) {
         canvas.width = video.videoWidth; canvas.height = video.videoHeight;
         const ctx = canvas.getContext('2d');
+        // 鏡像翻轉並繪製
         ctx.save(); ctx.scale(-1, 1);
         ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
         ctx.restore();
         ctx.drawImage(aSceneCanvas, 0, 0, canvas.width, canvas.height);
         
         const link = document.createElement('a');
-        link.download = 'ar-photo.png';
+        link.download = `photo-${Date.now()}.png`;
         link.href = canvas.toDataURL('image/png');
         link.click();
       }
